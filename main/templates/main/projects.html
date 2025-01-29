@@ -1,0 +1,596 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Projelerim</h2>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newProjectModal">
+                Yeni Proje Ekle
+            </button>
+        </div>
+    </div>
+
+    {% if projects %}
+        {% for project in projects %}
+        <div class="project-container mb-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center">
+                    <h3 class="mb-0">{{ project.title }}</h3>
+                    <button class="btn btn-danger btn-sm ms-3" onclick="confirmDeleteProject({{ project.id }}, '{{ project.title|escapejs }}')">
+                        <i class="bi bi-trash"></i> Projeyi Sil
+                    </button>
+                </div>
+                <button class="btn btn-success btn-sm" onclick="showNewTaskModal({{ project.id }})">
+                    Yeni Görev Ekle
+                </button>
+                {% if user == project.owner %}
+                <button class="btn btn-info btn-sm" onclick="showParticipantsModal('{{ project.id }}', '{{ project.title }}')" title="Katılımcıları Yönet">
+                    <i class="fas fa-users"></i>
+                </button>
+                {% endif %}
+            </div>
+            
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-secondary text-white">
+                            Yapılacaklar
+                        </div>
+                        <div class="card-body kanban-column" data-status="todo" data-project="{{ project.id }}">
+                            {% for task in project.tasks.all %}
+                                {% if task.status == 'todo' %}
+                                <div class="card mb-2 task-card" draggable="true" data-task-id="{{ task.id }}">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h5 class="card-title">{{ task.title }}</h5>
+                                            <div>
+                                                <button class="btn btn-sm btn-outline-primary me-1" onclick="showEditTaskModal({{ task.id }}, '{{ task.title|escapejs }}', '{{ task.description|escapejs }}')">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="confirmDeleteTask({{ task.id }}, '{{ task.title|escapejs }}')">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <p class="card-text">{{ task.description }}</p>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            Devam Edenler
+                        </div>
+                        <div class="card-body kanban-column" data-status="in_progress" data-project="{{ project.id }}">
+                            {% for task in project.tasks.all %}
+                                {% if task.status == 'in_progress' %}
+                                <div class="card mb-2 task-card" draggable="true" data-task-id="{{ task.id }}">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h5 class="card-title">{{ task.title }}</h5>
+                                            <div>
+                                                <button class="btn btn-sm btn-outline-primary me-1" onclick="showEditTaskModal({{ task.id }}, '{{ task.title|escapejs }}', '{{ task.description|escapejs }}')">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="confirmDeleteTask({{ task.id }}, '{{ task.title|escapejs }}')">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <p class="card-text">{{ task.description }}</p>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            Tamamlananlar
+                        </div>
+                        <div class="card-body kanban-column" data-status="done" data-project="{{ project.id }}">
+                            {% for task in project.tasks.all %}
+                                {% if task.status == 'done' %}
+                                <div class="card mb-2 task-card" draggable="true" data-task-id="{{ task.id }}">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h5 class="card-title">{{ task.title }}</h5>
+                                            <div>
+                                                <button class="btn btn-sm btn-outline-primary me-1" onclick="showEditTaskModal({{ task.id }}, '{{ task.title|escapejs }}', '{{ task.description|escapejs }}')">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="confirmDeleteTask({{ task.id }}, '{{ task.title|escapejs }}')">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <p class="card-text">{{ task.description }}</p>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-info">
+            Henüz hiç projeniz yok. Yeni bir proje ekleyerek başlayın!
+        </div>
+    {% endif %}
+</div>
+
+<!-- Silme Onay Modalı -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Silme Onayı</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="deleteConfirmText"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteButton">Sil</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Yeni Proje Modal -->
+<div class="modal fade" id="newProjectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yeni Proje</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="newProjectForm" method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="projectTitle" class="form-label">Proje Adı</label>
+                        <input type="text" class="form-control" id="projectTitle" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="projectDescription" class="form-label">Açıklama</label>
+                        <textarea class="form-control" id="projectDescription" name="description" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="submit" form="newProjectForm" class="btn btn-primary">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Görev Düzenleme Modal -->
+<div class="modal fade" id="editTaskModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Görevi Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editTaskForm" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" id="editTaskId" name="task_id">
+                    <div class="mb-3">
+                        <label for="editTaskTitle" class="form-label">Görev Adı</label>
+                        <input type="text" class="form-control" id="editTaskTitle" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editTaskDescription" class="form-label">Açıklama</label>
+                        <textarea class="form-control" id="editTaskDescription" name="description" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="updateTask()">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Yeni Görev Modal -->
+<div class="modal fade" id="newTaskModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yeni Görev</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="newTaskForm" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" id="taskProjectId" name="project_id">
+                    <div class="mb-3">
+                        <label for="taskTitle" class="form-label">Görev Adı</label>
+                        <input type="text" class="form-control" id="taskTitle" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="taskDescription" class="form-label">Açıklama</label>
+                        <textarea class="form-control" id="taskDescription" name="description" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="submit" form="newTaskForm" class="btn btn-primary">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Katılımcı Yönetimi Modalı -->
+<div class="modal fade" id="participantsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Katılımcıları Yönet: <span id="projectTitleInModal"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="newParticipant" class="form-label">Yeni Katılımcı Ekle</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="newParticipant" placeholder="Kullanıcı adı">
+                        <button class="btn btn-primary" onclick="addParticipant()">Ekle</button>
+                    </div>
+                </div>
+                <hr>
+                <div class="mb-3">
+                    <h6>Mevcut Katılımcılar</h6>
+                    <ul class="list-group" id="participantsList">
+                        <!-- Katılımcılar JavaScript ile buraya eklenecek -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kanban-column {
+        min-height: 200px;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+    }
+    
+    .task-card {
+        cursor: move;
+        margin-bottom: 10px !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .task-card .btn-outline-primary {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .task-card.dragging {
+        opacity: 0.5;
+    }
+
+    .kanban-column.drag-over {
+        background-color: #e9ecef;
+        border: 2px dashed #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const taskCards = document.querySelectorAll('.task-card');
+    const kanbanColumns = document.querySelectorAll('.kanban-column');
+    let draggingElement = null;
+
+    taskCards.forEach(card => {
+        card.addEventListener('dragstart', handleDragStart);
+        card.addEventListener('dragend', handleDragEnd);
+    });
+
+    kanbanColumns.forEach(column => {
+        column.addEventListener('dragover', handleDragOver);
+        column.addEventListener('dragleave', handleDragLeave);
+        column.addEventListener('drop', handleDrop);
+    });
+
+    function handleDragStart(e) {
+        draggingElement = this;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', ''); // Firefox için gerekli
+    }
+
+    function handleDragEnd(e) {
+        this.classList.remove('dragging');
+        kanbanColumns.forEach(column => {
+            column.classList.remove('drag-over');
+        });
+    }
+
+    function handleDragOver(e) {
+        if (e.preventDefault) {
+            e.preventDefault();
+        }
+        this.classList.add('drag-over');
+        return false;
+    }
+
+    function handleDragLeave(e) {
+        this.classList.remove('drag-over');
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+
+        if (draggingElement) {
+            const taskId = draggingElement.dataset.taskId;
+            const newStatus = this.dataset.status;
+            const projectId = this.dataset.project;
+
+            // AJAX ile görev durumunu güncelle
+            fetch('/update_task_status/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    task_id: taskId,
+                    new_status: newStatus,
+                    project_id: projectId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.appendChild(draggingElement);
+                } else {
+                    console.error('Task status update failed:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error updating task status:', error);
+            });
+        }
+    }
+});
+
+function showNewTaskModal(projectId) {
+    document.getElementById('taskProjectId').value = projectId;
+    new bootstrap.Modal(document.getElementById('newTaskModal')).show();
+}
+
+function showEditTaskModal(taskId, title, description) {
+    document.getElementById('editTaskId').value = taskId;
+    document.getElementById('editTaskTitle').value = title;
+    document.getElementById('editTaskDescription').value = description;
+    new bootstrap.Modal(document.getElementById('editTaskModal')).show();
+}
+
+function updateTask() {
+    const taskId = document.getElementById('editTaskId').value;
+    const title = document.getElementById('editTaskTitle').value;
+    const description = document.getElementById('editTaskDescription').value;
+
+    fetch('/update_task/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            task_id: taskId,
+            title: title,
+            description: description
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Sayfayı yenile
+            location.reload();
+        } else {
+            console.error('Task update failed:', data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error updating task:', error);
+    });
+}
+
+function confirmDeleteProject(projectId, projectTitle) {
+    const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+    document.getElementById('deleteConfirmText').textContent = `"${projectTitle}" projesini silmek istediğinize emin misiniz? Bu işlem geri alınamaz ve projedeki tüm görevler silinecektir.`;
+    
+    document.getElementById('confirmDeleteButton').onclick = function() {
+        deleteProject(projectId);
+        modal.hide();
+    };
+    
+    modal.show();
+}
+
+function deleteProject(projectId) {
+    fetch('/delete_project/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            project_id: projectId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            console.error('Project deletion failed:', data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting project:', error);
+    });
+}
+
+function confirmDeleteTask(taskId, taskTitle) {
+    const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+    document.getElementById('deleteConfirmText').textContent = `"${taskTitle}" görevini silmek istediğinize emin misiniz?`;
+    
+    document.getElementById('confirmDeleteButton').onclick = function() {
+        deleteTask(taskId);
+        modal.hide();
+    };
+    
+    modal.show();
+}
+
+function deleteTask(taskId) {
+    fetch('/delete_task/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            task_id: taskId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            console.error('Task deletion failed:', data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting task:', error);
+    });
+}
+
+// CSRF token'ı almak için yardımcı fonksiyon
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+let currentProjectId = null;
+
+function showParticipantsModal(projectId, projectTitle) {
+    currentProjectId = projectId;
+    document.getElementById('projectTitleInModal').textContent = projectTitle;
+    loadParticipants(projectId);
+    new bootstrap.Modal(document.getElementById('participantsModal')).show();
+}
+
+function loadParticipants(projectId) {
+    // AJAX ile katılımcıları yükle
+    fetch(`/get_participants/?project_id=${projectId}`)
+        .then(response => response.json())
+        .then(data => {
+            const participantsList = document.getElementById('participantsList');
+            participantsList.innerHTML = '';
+            
+            data.participants.forEach(participant => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                li.innerHTML = `
+                    ${participant.username}
+                    <button class="btn btn-danger btn-sm" onclick="removeParticipant('${participant.username}')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                participantsList.appendChild(li);
+            });
+        });
+}
+
+function addParticipant() {
+    const username = document.getElementById('newParticipant').value.trim();
+    if (!username) return;
+
+    fetch('/add_participant/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            project_id: currentProjectId,
+            username: username
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('newParticipant').value = '';
+            loadParticipants(currentProjectId);
+        } else {
+            alert(data.error || 'Katılımcı eklenirken bir hata oluştu.');
+        }
+    });
+}
+
+function removeParticipant(username) {
+    if (!confirm(`${username} kullanıcısını projeden çıkarmak istediğinize emin misiniz?`)) return;
+
+    fetch('/remove_participant/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            project_id: currentProjectId,
+            username: username
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadParticipants(currentProjectId);
+        } else {
+            alert(data.error || 'Katılımcı çıkarılırken bir hata oluştu.');
+        }
+    });
+}
+</script>
+{% endblock %}

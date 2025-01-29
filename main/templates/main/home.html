@@ -1,0 +1,55 @@
+{% extends 'main/base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <!-- Takvim Kartı -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Takvim</h5>
+                    <p class="card-text">Günlük yazılarınızı takvim üzerinde görüntüleyin ve yönetin.</p>
+                    <a href="{% url 'calendar' %}" class="btn btn-primary">Takvime Git</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Projeler Kartı -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Projeler</h5>
+                    <p class="card-text">Projelerinizi yönetin ve takip edin.</p>
+                    <a href="{% url 'projects' %}" class="btn btn-primary">Projelere Git</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        transition: transform 0.2s;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .card-title {
+        color: #1877f2;
+        margin-bottom: 1rem;
+    }
+    
+    .btn-primary {
+        background-color: #1877f2;
+        border-color: #1877f2;
+    }
+    
+    .btn-primary:hover {
+        background-color: #166fe5;
+        border-color: #166fe5;
+    }
+</style>
+{% endblock %}
