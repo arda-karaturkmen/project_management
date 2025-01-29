@@ -10,7 +10,7 @@ SECRET_KEY = 'django-secure-ke6y2#9dt^z8f3@q4j2x$n9r5=zk&8#p*v$m4y+j2n3q9z$x8c'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['ardakaraturkmen1.pythonanywhere.com', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['ardakaraturkmen1.pythonanywhere.com', '127.0.0.1', 'localhost', '.pythonanywhere.com']
 
 # Cache settings
 CACHES = {
@@ -108,14 +108,14 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 CACHE_MIDDLEWARE_SECONDS = 900
 
 # Security Settings
-SECURE_SSL_REDIRECT = True
-SECURE_HSTS_SECONDS = 31536000  # 1 year
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
+SECURE_SSL_REDIRECT = False  # PythonAnywhere free plan doesn't support SSL
+SECURE_HSTS_SECONDS = 0  # Disable HSTS for now
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+SECURE_HSTS_PRELOAD = False
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = False  # Disable secure cookies for now
+CSRF_COOKIE_SECURE = False  # Disable secure cookies for now
 X_FRAME_OPTIONS = 'DENY'
 
 # Default primary key field type
