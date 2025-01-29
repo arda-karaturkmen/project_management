@@ -11,6 +11,8 @@ import calendar
 import json
 from django.views.decorators.http import require_http_methods
 from django.db.models import Q
+from django.views.decorators.cache import cache_page
+from django.core.cache import cache
 
 # Create your views here.
 
@@ -31,6 +33,7 @@ def register(request):
     return render(request, 'main/register.html', {'form': form})
 
 @login_required
+@cache_page(60 * 15)  # Cache for 15 minutes
 def calendar(request):
     # URL'den ay ve yıl parametrelerini al
     month = request.GET.get('month')
@@ -44,11 +47,19 @@ def calendar(request):
         current_month = today.month
         current_year = today.year
     
-    # Bu aydaki tüm günlükleri al
-    entries = DiaryEntry.objects.filter(
-        date__year=current_year,
-        date__month=current_month
-    ).select_related('user')  # Kullanıcı bilgilerini de getir
+    # Cache key oluştur
+    cache_key = f'diary_entries_{current_year}_{current_month}'
+    entries = cache.get(cache_key)
+    
+    if entries is None:
+        # Bu aydaki tüm günlükleri al
+        entries = DiaryEntry.objects.filter(
+            date__year=current_year,
+            date__month=current_month
+        ).select_related('user')  # Kullanıcı bilgilerini de getir
+        
+        # Cache'e kaydet
+        cache.set(cache_key, entries, 60 * 15)  # 15 dakika cache'te tut
     
     # Günlük olan günleri işaretle
     diary_dates = {}
