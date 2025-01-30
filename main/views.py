@@ -182,12 +182,17 @@ def save_diary(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            date = data.get('date')
+            date_str = data.get('date')
             title = data.get('title')
             content = data.get('content')
             
-            if not all([date, title, content]):
+            if not all([date_str, title, content]):
                 return JsonResponse({'success': False, 'error': 'Eksik bilgi'})
+            
+            try:
+                date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                return JsonResponse({'success': False, 'error': 'Geçersiz tarih formatı'})
             
             diary = Diary.objects.create(
                 date=date,
