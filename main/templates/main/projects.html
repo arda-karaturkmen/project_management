@@ -50,7 +50,7 @@
                                                 <button class="btn btn-sm btn-outline-primary me-1" onclick="showEditTaskModal({{ task.id }}, '{{ task.title|escapejs }}', '{{ task.description|escapejs }}')">
                                                     <i class="bi bi-pencil"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-outline-danger" onclick="confirmDeleteTask({{ task.id }}, '{{ task.title|escapejs }}')">
+                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteTask({{ task.id }})">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </div>
@@ -80,7 +80,7 @@
                                                 <button class="btn btn-sm btn-outline-primary me-1" onclick="showEditTaskModal({{ task.id }}, '{{ task.title|escapejs }}', '{{ task.description|escapejs }}')">
                                                     <i class="bi bi-pencil"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-outline-danger" onclick="confirmDeleteTask({{ task.id }}, '{{ task.title|escapejs }}')">
+                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteTask({{ task.id }})">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </div>
@@ -110,7 +110,7 @@
                                                 <button class="btn btn-sm btn-outline-primary me-1" onclick="showEditTaskModal({{ task.id }}, '{{ task.title|escapejs }}', '{{ task.description|escapejs }}')">
                                                     <i class="bi bi-pencil"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-outline-danger" onclick="confirmDeleteTask({{ task.id }}, '{{ task.title|escapejs }}')">
+                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteTask({{ task.id }})">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </div>
@@ -303,201 +303,6 @@
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const taskCards = document.querySelectorAll('.task-card');
-    const kanbanColumns = document.querySelectorAll('.kanban-column');
-    let draggingElement = null;
-
-    taskCards.forEach(card => {
-        card.addEventListener('dragstart', handleDragStart);
-        card.addEventListener('dragend', handleDragEnd);
-    });
-
-    kanbanColumns.forEach(column => {
-        column.addEventListener('dragover', handleDragOver);
-        column.addEventListener('dragleave', handleDragLeave);
-        column.addEventListener('drop', handleDrop);
-    });
-
-    function handleDragStart(e) {
-        draggingElement = this;
-        this.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', ''); // Firefox için gerekli
-    }
-
-    function handleDragEnd(e) {
-        this.classList.remove('dragging');
-        kanbanColumns.forEach(column => {
-            column.classList.remove('drag-over');
-        });
-    }
-
-    function handleDragOver(e) {
-        if (e.preventDefault) {
-            e.preventDefault();
-        }
-        this.classList.add('drag-over');
-        return false;
-    }
-
-    function handleDragLeave(e) {
-        this.classList.remove('drag-over');
-    }
-
-    function handleDrop(e) {
-        e.preventDefault();
-        this.classList.remove('drag-over');
-
-        if (draggingElement) {
-            const taskId = draggingElement.dataset.taskId;
-            const newStatus = this.dataset.status;
-            const projectId = this.dataset.project;
-
-            // AJAX ile görev durumunu güncelle
-            fetch('/update_task_status/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({
-                    task_id: taskId,
-                    new_status: newStatus,
-                    project_id: projectId
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    this.appendChild(draggingElement);
-                } else {
-                    console.error('Task status update failed:', data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error updating task status:', error);
-            });
-        }
-    }
-});
-
-function showNewTaskModal(projectId) {
-    document.getElementById('taskProjectId').value = projectId;
-    new bootstrap.Modal(document.getElementById('newTaskModal')).show();
-}
-
-function showEditTaskModal(taskId, title, description) {
-    document.getElementById('editTaskId').value = taskId;
-    document.getElementById('editTaskTitle').value = title;
-    document.getElementById('editTaskDescription').value = description;
-    new bootstrap.Modal(document.getElementById('editTaskModal')).show();
-}
-
-function updateTask() {
-    const taskId = document.getElementById('editTaskId').value;
-    const title = document.getElementById('editTaskTitle').value;
-    const description = document.getElementById('editTaskDescription').value;
-
-    fetch('/update_task/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({
-            task_id: taskId,
-            title: title,
-            description: description
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Sayfayı yenile
-            location.reload();
-        } else {
-            console.error('Task update failed:', data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Error updating task:', error);
-    });
-}
-
-function confirmDeleteProject(projectId, projectTitle) {
-    const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
-    document.getElementById('deleteConfirmText').textContent = `"${projectTitle}" projesini silmek istediğinize emin misiniz? Bu işlem geri alınamaz ve projedeki tüm görevler silinecektir.`;
-    
-    document.getElementById('confirmDeleteButton').onclick = function() {
-        deleteProject(projectId);
-        modal.hide();
-    };
-    
-    modal.show();
-}
-
-function deleteProject(projectId) {
-    fetch('/delete_project/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({
-            project_id: projectId
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            console.error('Project deletion failed:', data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Error deleting project:', error);
-    });
-}
-
-function confirmDeleteTask(taskId, taskTitle) {
-    const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
-    document.getElementById('deleteConfirmText').textContent = `"${taskTitle}" görevini silmek istediğinize emin misiniz?`;
-    
-    document.getElementById('confirmDeleteButton').onclick = function() {
-        deleteTask(taskId);
-        modal.hide();
-    };
-    
-    modal.show();
-}
-
-function deleteTask(taskId) {
-    fetch('/delete_task/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({
-            task_id: taskId
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            console.error('Task deletion failed:', data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Error deleting task:', error);
-    });
-}
-
-// CSRF token'ı almak için yardımcı fonksiyon
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -513,7 +318,97 @@ function getCookie(name) {
     return cookieValue;
 }
 
-let currentProjectId = null;
+function confirmDeleteProject(projectId, projectTitle) {
+    if (confirm(`"${projectTitle}" projesini silmek istediğinizden emin misiniz?`)) {
+        fetch('/projects/delete/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                project_id: projectId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Proje silinirken bir hata oluştu: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Proje silinirken bir hata oluştu.');
+        });
+    }
+}
+
+function showNewTaskModal(projectId) {
+    const modal = document.getElementById('newTaskModal');
+    document.getElementById('taskProjectId').value = projectId;
+    modal.style.display = 'block';
+}
+
+function closeTaskModal() {
+    document.getElementById('newTaskModal').style.display = 'none';
+    document.getElementById('taskTitle').value = '';
+    document.getElementById('taskDescription').value = '';
+}
+
+function updateTaskStatus(taskId, newStatus) {
+    fetch('/tasks/update_status/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            task_id: taskId,
+            status: newStatus
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Görev durumu güncellenirken bir hata oluştu: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Görev durumu güncellenirken bir hata oluştu.');
+    });
+}
+
+function deleteTask(taskId) {
+    if (confirm('Bu görevi silmek istediğinizden emin misiniz?')) {
+        fetch('/tasks/delete/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                task_id: taskId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Görev silinirken bir hata oluştu: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Görev silinirken bir hata oluştu.');
+        });
+    }
+}
 
 function showParticipantsModal(projectId, projectTitle) {
     currentProjectId = projectId;
@@ -571,7 +466,7 @@ function addParticipant() {
 }
 
 function removeParticipant(username) {
-    if (!confirm(`${username} kullanıcısını projeden çıkarmak istediğinize emin misiniz?`)) return;
+    if (!confirm(`${username} kullanıcısını projeden çıkarmak istediğinizden emin misiniz?`)) return;
 
     fetch('/remove_participant/', {
         method: 'POST',

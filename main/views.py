@@ -34,19 +34,18 @@ def projects(request):
             Task.objects.create(
                 project=project,
                 title=request.POST['title'],
-                description=request.POST['description']
+                description=request.POST.get('description', '')
             )
             return redirect('projects')
         else:  # Adding new project
             project = Project.objects.create(
                 created_by=request.user,
                 title=request.POST['title'],
-                description=request.POST['description'],
+                description=request.POST.get('description', ''),
                 is_public=True
             )
             return redirect('projects')
     
-    # Tüm projeleri getir
     all_projects = Project.objects.all().order_by('-created_at')
     return render(request, 'main/projects.html', {'projects': all_projects})
 
@@ -165,31 +164,34 @@ def calendar(request):
     })
 
 @login_required
-@require_http_methods(['GET'])
 def get_diary_entries(request, date):
-    entries = Diary.objects.filter(date=date)
-    data = [{
-        'id': entry.id,
-        'title': entry.title,
-        'content': entry.content,
-        'created_by': entry.created_by.username if entry.created_by else 'Unknown'
-    } for entry in entries]
-    return JsonResponse({'entries': data})
+    try:
+        entries = Diary.objects.filter(date=date)
+        entries_data = [{
+            'id': entry.id,
+            'title': entry.title,
+            'content': entry.content,
+            'created_by': entry.created_by.username
+        } for entry in entries]
+        return JsonResponse({'success': True, 'entries': entries_data})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 @login_required
 @require_http_methods(['POST'])
 def save_diary(request):
     data = json.loads(request.body)
-    date = data.get('date')
+    date_str = data.get('date')
     title = data.get('title')
     content = data.get('content')
     
     try:
+        date = datetime.strptime(date_str, '%Y-%m-%d').date()
         diary = Diary.objects.create(
+            created_by=request.user,
             date=date,
             title=title,
-            content=content,
-            created_by=request.user
+            content=content
         )
         return JsonResponse({
             'success': True,
@@ -197,7 +199,7 @@ def save_diary(request):
                 'id': diary.id,
                 'title': diary.title,
                 'content': diary.content,
-                'created_by': request.user.username
+                'created_by': diary.created_by.username
             }
         })
     except Exception as e:

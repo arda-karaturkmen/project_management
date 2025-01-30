@@ -3,23 +3,27 @@
 {% block content %}
 <div class="calendar-container">
     <div class="calendar-header">
-        <h2 id="currentMonthYear"></h2>
+        <h2 id="monthDisplay"></h2>
         <div>
-            <button class="nav-btn" onclick="previousMonth()"><i class="fas fa-chevron-left"></i></button>
-            <button class="nav-btn" onclick="nextMonth()"><i class="fas fa-chevron-right"></i></button>
+            <button class="nav-btn" id="prevMonth"><i class="fas fa-chevron-left"></i></button>
+            <button class="nav-btn" id="nextMonth"><i class="fas fa-chevron-right"></i></button>
         </div>
     </div>
     <div class="calendar">
-        <div class="weekdays">
-            <div class="weekday-header">Pzt</div>
-            <div class="weekday-header">Sal</div>
-            <div class="weekday-header">Çar</div>
-            <div class="weekday-header">Per</div>
-            <div class="weekday-header">Cum</div>
-            <div class="weekday-header">Cmt</div>
-            <div class="weekday-header">Paz</div>
-        </div>
-        <div id="calendarDays" class="calendar-days"></div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Pzt</th>
+                    <th>Sal</th>
+                    <th>Çar</th>
+                    <th>Per</th>
+                    <th>Cum</th>
+                    <th>Cmt</th>
+                    <th>Paz</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
 </div>
 
@@ -59,48 +63,29 @@
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     }
     
-    .weekdays {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        background: #f8f9fa;
-        padding: 10px 0;
+    .calendar table {
+        width: 100%;
+        border-collapse: collapse;
     }
     
-    .weekday-header {
+    .calendar th, .calendar td {
         text-align: center;
+        padding: 10px;
+        border: 1px solid #ddd;
+    }
+    
+    .calendar th {
+        background: #f8f9fa;
         font-weight: bold;
     }
     
-    .calendar-days {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 1px;
-        background: #dee2e6;
-        padding: 1px;
-    }
-    
-    .calendar-day {
-        background: white;
-        aspect-ratio: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 8px;
+    .calendar td {
         cursor: pointer;
     }
     
-    .calendar-day:hover {
+    .calendar td.today {
         background: #f8f9fa;
-    }
-    
-    .calendar-day.has-diary {
         font-weight: bold;
-        color: #1877f2;
-    }
-    
-    .calendar-day.empty {
-        background: #f8f9fa;
-        cursor: default;
     }
     
     .diary-modal {
@@ -227,123 +212,36 @@
 </style>
 
 <script>
-    let currentMonth = {{ current_month }};
-    let currentYear = {{ current_year }};
-    const diaryDates = {{ diary_dates|safe }};
-    
-    function updateCalendar() {
-        const calendarDays = document.getElementById('calendarDays');
-        const monthYearElement = document.getElementById('currentMonthYear');
-        
-        // Ay ve yıl başlığını güncelle
-        const date = new Date(currentYear, currentMonth - 1, 1);
-        monthYearElement.textContent = date.toLocaleDateString('tr-TR', { 
-            month: 'long', 
-            year: 'numeric' 
-        });
-        
-        calendarDays.innerHTML = '';
-        
-        // Ayın ilk gününü bul
-        const firstDay = new Date(currentYear, currentMonth - 1, 1).getDay();
-        const startDay = firstDay === 0 ? 6 : firstDay - 1;
-        
-        // Ayın son gününü bul
-        const lastDay = new Date(currentYear, currentMonth, 0).getDate();
-        
-        // Boş günler
-        for (let i = 0; i < startDay; i++) {
-            const emptyDay = document.createElement('div');
-            emptyDay.className = 'calendar-day empty';
-            calendarDays.appendChild(emptyDay);
-        }
-        
-        // Ayın günleri
-        for (let day = 1; day <= lastDay; day++) {
-            const dayElement = document.createElement('div');
-            dayElement.className = 'calendar-day';
-            dayElement.textContent = day;
-            
-            if (diaryDates[day]) {
-                dayElement.classList.add('has-diary');
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
             }
-            
-            dayElement.addEventListener('click', () => openDiaryModal(day));
-            calendarDays.appendChild(dayElement);
         }
+        return cookieValue;
     }
-    
-    function previousMonth() {
-        currentMonth--;
-        if (currentMonth < 1) {
-            currentMonth = 12;
-            currentYear--;
-        }
-        window.location.href = `/calendar/?month=${currentMonth}&year=${currentYear}`;
-    }
-    
-    function nextMonth() {
-        currentMonth++;
-        if (currentMonth > 12) {
-            currentMonth = 1;
-            currentYear++;
-        }
-        window.location.href = `/calendar/?month=${currentMonth}&year=${currentYear}`;
-    }
-    
-    function openDiaryModal(day) {
-        const modal = document.getElementById('diaryModal');
-        const diaryDate = document.getElementById('diaryDate');
-        const diaryEntries = document.getElementById('diaryEntries');
-        
-        // Tarihi formatla
-        const date = new Date(currentYear, currentMonth - 1, day);
-        const formattedDate = date.toISOString().split('T')[0];
-        diaryDate.textContent = formattedDate;
-        
-        // Mevcut girişleri getir
-        fetch(`/diary/entries/${formattedDate}/`)
-            .then(response => response.json())
-            .then(data => {
-                diaryEntries.innerHTML = '';
-                data.entries.forEach(entry => {
-                    const entryDiv = document.createElement('div');
-                    entryDiv.className = 'diary-entry';
-                    entryDiv.innerHTML = `
-                        <div class="entry-header">
-                            <h4>${entry.title}</h4>
-                            <small>Oluşturan: ${entry.created_by}</small>
-                        </div>
-                        <p>${entry.content}</p>
-                    `;
-                    diaryEntries.appendChild(entryDiv);
-                });
-            });
-        
-        modal.style.display = 'block';
-    }
-    
-    function closeDiaryModal() {
-        document.getElementById('diaryModal').style.display = 'none';
-    }
-    
+
     function saveDiary() {
-        const day = parseInt(document.getElementById('diaryDate').textContent.split(' ')[0]);
-        const title = document.getElementById('diaryTitle').value.trim();
-        const content = document.getElementById('diaryContent').value.trim();
+        const title = document.getElementById('diaryTitle').value;
+        const content = document.getElementById('diaryContent').value;
+        const date = document.getElementById('diaryDate').getAttribute('data-date');
         
-        if (!content) {
-            alert('Lütfen günlük içeriği giriniz.');
+        if (!title || !content) {
+            alert('Lütfen başlık ve içerik giriniz.');
             return;
         }
-        
-        const date = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        
+
         fetch('/diary/save/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
+                'X-CSRFToken': getCookie('csrftoken')
             },
             body: JSON.stringify({
                 date: date,
@@ -353,13 +251,150 @@
         })
         .then(response => response.json())
         .then(data => {
-            if (data.status === 'success') {
-                location.reload();
+            if (data.success) {
+                // Form alanlarını temizle
+                document.getElementById('diaryTitle').value = '';
+                document.getElementById('diaryContent').value = '';
+                
+                // Yeni girişi ekle
+                const entry = data.diary;
+                const entriesDiv = document.getElementById('diaryEntries');
+                const entryHtml = `
+                    <div class="diary-entry">
+                        <div class="entry-header">
+                            <h4>${entry.title}</h4>
+                            <small>Oluşturan: ${entry.created_by}</small>
+                        </div>
+                        <p>${entry.content}</p>
+                    </div>
+                `;
+                entriesDiv.insertAdjacentHTML('afterbegin', entryHtml);
+            } else {
+                alert('Günlük kaydedilirken bir hata oluştu: ' + data.error);
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Günlük kaydedilirken bir hata oluştu.');
         });
     }
-    
-    // Takvimi güncelle
-    updateCalendar();
+
+    function showDiaryModal(date) {
+        const modal = document.getElementById('diaryModal');
+        const dateHeader = document.getElementById('diaryDate');
+        const entriesDiv = document.getElementById('diaryEntries');
+        
+        dateHeader.textContent = date;
+        dateHeader.setAttribute('data-date', date);
+        entriesDiv.innerHTML = '';
+        modal.style.display = 'block';
+
+        // Seçilen tarihteki günlükleri getir
+        fetch(`/diary/entries/${date}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    data.entries.forEach(entry => {
+                        const entryHtml = `
+                            <div class="diary-entry">
+                                <div class="entry-header">
+                                    <h4>${entry.title}</h4>
+                                    <small>Oluşturan: ${entry.created_by}</small>
+                                </div>
+                                <p>${entry.content}</p>
+                            </div>
+                        `;
+                        entriesDiv.insertAdjacentHTML('beforeend', entryHtml);
+                    });
+                } else {
+                    console.error('Error:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Günlükler yüklenirken bir hata oluştu.');
+            });
+    }
+
+    function closeDiaryModal() {
+        document.getElementById('diaryModal').style.display = 'none';
+        document.getElementById('diaryTitle').value = '';
+        document.getElementById('diaryContent').value = '';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const calendar = document.querySelector('.calendar');
+        const today = new Date();
+        let currentMonth = today.getMonth();
+        let currentYear = today.getFullYear();
+
+        function generateCalendar(month, year) {
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startingDay = firstDay.getDay();
+            const monthLength = lastDay.getDate();
+
+            const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+                              "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+
+            document.getElementById('monthDisplay').textContent = `${monthNames[month]} ${year}`;
+
+            const calendarBody = calendar.querySelector('tbody');
+            calendarBody.innerHTML = '';
+
+            let date = 1;
+            for (let i = 0; i < 6; i++) {
+                const row = document.createElement('tr');
+                
+                for (let j = 0; j < 7; j++) {
+                    const cell = document.createElement('td');
+                    
+                    if (i === 0 && j < startingDay) {
+                        cell.textContent = '';
+                    } else if (date > monthLength) {
+                        break;
+                    } else {
+                        cell.textContent = date;
+                        const fullDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+                        cell.setAttribute('data-date', fullDate);
+                        cell.addEventListener('click', () => showDiaryModal(fullDate));
+                        
+                        if (date === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+                            cell.classList.add('today');
+                        }
+                        
+                        date++;
+                    }
+                    
+                    row.appendChild(cell);
+                }
+                
+                calendarBody.appendChild(row);
+                if (date > monthLength) {
+                    break;
+                }
+            }
+        }
+
+        document.getElementById('prevMonth').addEventListener('click', () => {
+            currentMonth--;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            generateCalendar(currentMonth, currentYear);
+        });
+
+        document.getElementById('nextMonth').addEventListener('click', () => {
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            generateCalendar(currentMonth, currentYear);
+        });
+
+        generateCalendar(currentMonth, currentYear);
+    });
 </script>
 {% endblock %}
