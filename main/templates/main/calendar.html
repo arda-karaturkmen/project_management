@@ -35,8 +35,7 @@
             <textarea id="diaryContent" class="diary-textarea" placeholder="Bugün neler yaşadın?"></textarea>
             <button class="save-btn" onclick="saveDiary()">Kaydet</button>
         </div>
-        <hr>
-        <div id="diaryEntries">
+        <div id="diaryEntries" class="diary-entries">
             <!-- Günlük girişleri buraya eklenecek -->
         </div>
     </div>
@@ -107,11 +106,13 @@
     .diary-modal {
         display: none;
         position: fixed;
-        top: 0;
+        z-index: 1000;
         left: 0;
+        top: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.5);
+        background-color: rgba(0, 0, 0, 0.5);
+        overflow-y: auto;
     }
     
     .diary-content {
@@ -121,54 +122,90 @@
         width: 90%;
         max-width: 600px;
         border-radius: 10px;
+        max-height: 80vh;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
     }
     
     .diary-header {
+        position: sticky;
+        top: 0;
+        background: white;
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+        margin-bottom: 15px;
+        z-index: 1;
+    }
+    
+    #diaryForm {
+        margin-bottom: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .diary-entry {
+        background: #fff;
+        padding: 15px;
+        margin-bottom: 15px;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+    }
+    
+    .entry-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 20px;
+        margin-bottom: 10px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #eee;
     }
     
-    .close-btn {
-        background: none;
-        border: none;
-        font-size: 24px;
-        cursor: pointer;
+    .entry-header h4 {
+        margin: 0;
+        color: #333;
     }
     
+    .entry-header small {
+        color: #666;
+    }
+    
+    .diary-entry p {
+        margin: 0;
+        color: #555;
+        line-height: 1.5;
+    }
+
     .diary-title-input {
         width: 100%;
-        padding: 10px;
+        padding: 8px;
         margin-bottom: 10px;
-        border: 1px solid #dee2e6;
-        border-radius: 5px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
     }
     
     .diary-textarea {
         width: 100%;
-        height: 200px;
-        padding: 10px;
+        min-height: 100px;
+        padding: 8px;
         margin-bottom: 10px;
-        border: 1px solid #dee2e6;
-        border-radius: 5px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
         resize: vertical;
     }
     
     .save-btn {
-        background: #1877f2;
+        background: #007bff;
         color: white;
         border: none;
-        padding: 10px 20px;
-        border-radius: 5px;
+        padding: 8px 16px;
+        border-radius: 4px;
         cursor: pointer;
     }
     
-    .diary-entry {
-        background: #f8f9fa;
-        padding: 15px;
-        margin-bottom: 10px;
-        border-radius: 5px;
+    .save-btn:hover {
+        background: #0056b3;
     }
     
     .diary-entry-header {
