@@ -8,9 +8,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-secure-ke6y2#9dt^z8f3@q4j2x$n9r5=zk&8#p*v$m4y+j2n3q9z$x8c'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
-ALLOWED_HOSTS = ['ayk.pythonanywhere.com', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['ayk.pythonanywhere.com', '127.0.0.1', 'localhost', 'www.pythonanywhere.com']
 
 # Application definition
 INSTALLED_APPS = [
@@ -22,7 +22,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'corsheaders',
     'main',
-    'channels',
 ]
 
 MIDDLEWARE = [
@@ -55,7 +54,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'mysite.wsgi.application'
-ASGI_APPLICATION = 'mysite.asgi.application'
 
 # Database
 DATABASES = {
@@ -107,10 +105,3 @@ CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:8000',
     'https://ayk.pythonanywhere.com',
 ]
-
-# Channel Layers
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer'
-    }
-}

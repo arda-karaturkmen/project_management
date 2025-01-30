@@ -15,9 +15,10 @@
     {% if projects %}
         {% for project in projects %}
         <div class="project-container mb-5">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center">
                     <h3 class="mb-0">{{ project.title }}</h3>
+                    <small class="text-muted ms-2">(Oluşturan: {{ project.created_by.username }})</small>
                     <button class="btn btn-danger btn-sm ms-3" onclick="confirmDeleteProject({{ project.id }}, '{{ project.title|escapejs }}')">
                         <i class="bi bi-trash"></i> Projeyi Sil
                     </button>

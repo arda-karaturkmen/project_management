@@ -7,7 +7,8 @@ from django.contrib import messages
 from django.views.decorators.http import require_http_methods
 from django.db.models import Q
 import json
-from .models import Project, Task
+from .models import Project, Task, Diary
+from datetime import datetime
 
 @login_required
 def home(request):
@@ -30,9 +31,6 @@ def projects(request):
     if request.method == 'POST':
         if 'project_id' in request.POST:  # Adding new task
             project = get_object_or_404(Project, id=request.POST['project_id'])
-            if not project.can_user_edit(request.user):
-                return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
-            
             Task.objects.create(
                 project=project,
                 title=request.POST['title'],
@@ -41,21 +39,16 @@ def projects(request):
             return redirect('projects')
         else:  # Adding new project
             project = Project.objects.create(
-                owner=request.user,
+                created_by=request.user,
                 title=request.POST['title'],
                 description=request.POST['description'],
                 is_public=True
             )
             return redirect('projects')
     
-    # Get all accessible projects
-    accessible_projects = Project.objects.filter(
-        Q(is_public=True) |
-        Q(owner=request.user) |
-        Q(participants=request.user)
-    ).distinct()
-    
-    return render(request, 'main/projects.html', {'projects': accessible_projects})
+    # Tüm projeleri getir
+    all_projects = Project.objects.all().order_by('-created_at')
+    return render(request, 'main/projects.html', {'projects': all_projects})
 
 @login_required
 @require_http_methods(['POST'])
@@ -66,9 +59,6 @@ def update_task_status(request):
     
     try:
         task = Task.objects.get(id=task_id)
-        if not task.project.can_user_edit(request.user):
-            return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
-        
         task.status = new_status
         task.save()
         return JsonResponse({'success': True})
@@ -85,9 +75,6 @@ def update_task(request):
     
     try:
         task = Task.objects.get(id=task_id)
-        if not task.project.can_user_edit(request.user):
-            return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
-        
         task.title = title
         task.description = description
         task.save()
@@ -103,9 +90,6 @@ def delete_project(request):
     
     try:
         project = Project.objects.get(id=project_id)
-        if request.user != project.owner:
-            return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
-        
         project.delete()
         return JsonResponse({'success': True})
     except Project.DoesNotExist:
@@ -119,9 +103,6 @@ def delete_task(request):
     
     try:
         task = Task.objects.get(id=task_id)
-        if not task.project.can_user_edit(request.user):
-            return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
-        
         task.delete()
         return JsonResponse({'success': True})
     except Task.DoesNotExist:
@@ -136,9 +117,6 @@ def add_participant(request):
     
     try:
         project = Project.objects.get(id=project_id)
-        if request.user != project.owner:
-            return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
-        
         user = User.objects.get(username=username)
         project.participants.add(user)
         return JsonResponse({'success': True})
@@ -154,9 +132,6 @@ def remove_participant(request):
     
     try:
         project = Project.objects.get(id=project_id)
-        if request.user != project.owner:
-            return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
-        
         user = User.objects.get(username=username)
         project.participants.remove(user)
         return JsonResponse({'success': True})
@@ -169,10 +144,61 @@ def get_participants(request):
     
     try:
         project = Project.objects.get(id=project_id)
-        if not project.can_user_edit(request.user):
-            return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
-        
         participants = [{'username': user.username} for user in project.participants.all()]
         return JsonResponse({'success': True, 'participants': participants})
     except Project.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Project not found'}, status=404)
+
+@login_required
+def calendar(request):
+    current_month = datetime.now().month
+    current_year = datetime.now().year
+    
+    # Tüm günlük girişlerinin tarihlerini al
+    diary_dates = list(Diary.objects.all().values_list('date', flat=True))
+    diary_dates = [date.strftime('%Y-%m-%d') for date in diary_dates]
+    
+    return render(request, 'main/calendar.html', {
+        'current_month': current_month,
+        'current_year': current_year,
+        'diary_dates': diary_dates
+    })
+
+@login_required
+@require_http_methods(['GET'])
+def get_diary_entries(request, date):
+    entries = Diary.objects.filter(date=date)
+    data = [{
+        'id': entry.id,
+        'title': entry.title,
+        'content': entry.content,
+        'created_by': entry.created_by.username if entry.created_by else 'Unknown'
+    } for entry in entries]
+    return JsonResponse({'entries': data})
+
+@login_required
+@require_http_methods(['POST'])
+def save_diary(request):
+    data = json.loads(request.body)
+    date = data.get('date')
+    title = data.get('title')
+    content = data.get('content')
+    
+    try:
+        diary = Diary.objects.create(
+            date=date,
+            title=title,
+            content=content,
+            created_by=request.user
+        )
+        return JsonResponse({
+            'success': True,
+            'diary': {
+                'id': diary.id,
+                'title': diary.title,
+                'content': diary.content,
+                'created_by': request.user.username
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)

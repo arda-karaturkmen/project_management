@@ -12,4 +12,7 @@ urlpatterns = [
     path('project/participant/add/', views.add_participant, name='add_participant'),
     path('project/participant/remove/', views.remove_participant, name='remove_participant'),
     path('project/participants/', views.get_participants, name='get_participants'),
+    path('calendar/', views.calendar, name='calendar'),
+    path('diary/entries/<str:date>/', views.get_diary_entries, name='get_diary_entries'),
+    path('diary/save/', views.save_diary, name='save_diary'),
 ]

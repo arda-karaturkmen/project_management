@@ -256,40 +256,31 @@
     
     function openDiaryModal(day) {
         const modal = document.getElementById('diaryModal');
-        const dateElement = document.getElementById('diaryDate');
-        const entriesElement = document.getElementById('diaryEntries');
+        const diaryDate = document.getElementById('diaryDate');
+        const diaryEntries = document.getElementById('diaryEntries');
         
-        // Tarihi ayarla
+        // Tarihi formatla
         const date = new Date(currentYear, currentMonth - 1, day);
-        dateElement.textContent = date.toLocaleDateString('tr-TR', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric'
-        });
+        const formattedDate = date.toISOString().split('T')[0];
+        diaryDate.textContent = formattedDate;
         
-        // Günlük girişlerini yükle
-        fetch(`/diary/${currentYear}/${currentMonth}/${day}/`)
+        // Mevcut girişleri getir
+        fetch(`/diary/entries/${formattedDate}/`)
             .then(response => response.json())
             .then(data => {
-                entriesElement.innerHTML = '';
-                
-                if (data.status === 'empty') {
-                    entriesElement.innerHTML = '<p class="text-muted">Bu tarihte henüz günlük girişi yok.</p>';
-                } else {
-                    data.entries.forEach(entry => {
-                        const entryDiv = document.createElement('div');
-                        entryDiv.className = 'diary-entry';
-                        entryDiv.innerHTML = `
-                            <div class="diary-entry-header">
-                                <span>${entry.username}</span>
-                                <span>${entry.created_at}</span>
-                            </div>
-                            <div class="diary-entry-title">${entry.title}</div>
-                            <div class="diary-entry-content">${entry.content}</div>
-                        `;
-                        entriesElement.appendChild(entryDiv);
-                    });
-                }
+                diaryEntries.innerHTML = '';
+                data.entries.forEach(entry => {
+                    const entryDiv = document.createElement('div');
+                    entryDiv.className = 'diary-entry';
+                    entryDiv.innerHTML = `
+                        <div class="entry-header">
+                            <h4>${entry.title}</h4>
+                            <small>Oluşturan: ${entry.created_by}</small>
+                        </div>
+                        <p>${entry.content}</p>
+                    `;
+                    diaryEntries.appendChild(entryDiv);
+                });
             });
         
         modal.style.display = 'block';
