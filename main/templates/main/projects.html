@@ -212,19 +212,18 @@
 </div>
 
 <!-- Yeni Görev Modal -->
-<div class="modal fade" id="newTaskModal" tabindex="-1">
+<div class="modal fade" id="newTaskModal" tabindex="-1" aria-labelledby="newTaskModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Yeni Görev</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="newTaskModalLabel">Yeni Görev Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="newTaskForm" method="POST">
-                    {% csrf_token %}
+                <form id="newTaskForm">
                     <input type="hidden" id="taskProjectId" name="project_id">
                     <div class="mb-3">
-                        <label for="taskTitle" class="form-label">Görev Adı</label>
+                        <label for="taskTitle" class="form-label">Başlık</label>
                         <input type="text" class="form-control" id="taskTitle" name="title" required>
                     </div>
                     <div class="mb-3">
@@ -235,7 +234,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-                <button type="submit" form="newTaskForm" class="btn btn-primary">Kaydet</button>
+                <button type="button" class="btn btn-primary" onclick="saveTask()">Kaydet</button>
             </div>
         </div>
     </div>
@@ -347,15 +346,50 @@ function confirmDeleteProject(projectId, projectTitle) {
 }
 
 function showNewTaskModal(projectId) {
-    const modal = document.getElementById('newTaskModal');
+    const modal = new bootstrap.Modal(document.getElementById('newTaskModal'));
     document.getElementById('taskProjectId').value = projectId;
-    modal.style.display = 'block';
+    modal.show();
 }
 
-function closeTaskModal() {
-    document.getElementById('newTaskModal').style.display = 'none';
-    document.getElementById('taskTitle').value = '';
-    document.getElementById('taskDescription').value = '';
+function saveTask() {
+    const projectId = document.getElementById('taskProjectId').value;
+    const title = document.getElementById('taskTitle').value;
+    const description = document.getElementById('taskDescription').value;
+
+    if (!title) {
+        alert('Lütfen görev başlığını giriniz.');
+        return;
+    }
+
+    fetch('/project/task/create/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            project_id: projectId,
+            title: title,
+            description: description
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Görev eklenirken bir hata oluştu: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Görev eklenirken bir hata oluştu. Lütfen tekrar deneyin.');
+    });
 }
 
 function updateTaskStatus(taskId, newStatus) {

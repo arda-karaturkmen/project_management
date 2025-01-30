@@ -245,3 +245,43 @@ def save_diary(request):
             return JsonResponse({'success': False, 'error': str(e)})
     
     return JsonResponse({'success': False, 'error': 'Geçersiz istek metodu'})
+
+@login_required
+def create_task(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            project_id = data.get('project_id')
+            title = data.get('title')
+            description = data.get('description', '')
+            
+            if not all([project_id, title]):
+                return JsonResponse({'success': False, 'error': 'Eksik bilgi'})
+            
+            try:
+                project = Project.objects.get(id=project_id)
+            except Project.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Proje bulunamadı'})
+            
+            task = Task.objects.create(
+                project=project,
+                title=title,
+                description=description,
+                status='todo'  # Varsayılan durum
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'task': {
+                    'id': task.id,
+                    'title': task.title,
+                    'description': task.description,
+                    'status': task.status
+                }
+            })
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Geçersiz JSON verisi'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Geçersiz istek metodu'})
