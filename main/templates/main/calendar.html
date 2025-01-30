@@ -237,11 +237,13 @@
             return;
         }
 
+        const csrftoken = getCookie('csrftoken');
+        
         fetch('/diary/save/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': csrftoken
             },
             body: JSON.stringify({
                 date: date,
@@ -249,7 +251,12 @@
                 content: content
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 // Form alanlarını temizle
@@ -270,12 +277,12 @@
                 `;
                 entriesDiv.insertAdjacentHTML('afterbegin', entryHtml);
             } else {
-                alert('Günlük kaydedilirken bir hata oluştu: ' + data.error);
+                alert('Günlük kaydedilirken bir hata oluştu: ' + (data.error || 'Bilinmeyen hata'));
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Günlük kaydedilirken bir hata oluştu.');
+            alert('Günlük kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.');
         });
     }
 
@@ -349,7 +356,7 @@
                 for (let j = 0; j < 7; j++) {
                     const cell = document.createElement('td');
                     
-                    if (i === 0 && j < startingDay) {
+                    if (i === 0 && j < (startingDay === 0 ? 6 : startingDay - 1)) {
                         cell.textContent = '';
                     } else if (date > monthLength) {
                         break;

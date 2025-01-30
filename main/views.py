@@ -178,29 +178,36 @@ def get_diary_entries(request, date):
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 @login_required
-@require_http_methods(['POST'])
 def save_diary(request):
-    data = json.loads(request.body)
-    date_str = data.get('date')
-    title = data.get('title')
-    content = data.get('content')
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            date = data.get('date')
+            title = data.get('title')
+            content = data.get('content')
+            
+            if not all([date, title, content]):
+                return JsonResponse({'success': False, 'error': 'Eksik bilgi'})
+            
+            diary = Diary.objects.create(
+                date=date,
+                title=title,
+                content=content,
+                created_by=request.user
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'diary': {
+                    'title': diary.title,
+                    'content': diary.content,
+                    'created_by': diary.created_by.username,
+                    'date': diary.date.strftime('%Y-%m-%d')
+                }
+            })
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Geçersiz JSON verisi'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
     
-    try:
-        date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        diary = Diary.objects.create(
-            created_by=request.user,
-            date=date,
-            title=title,
-            content=content
-        )
-        return JsonResponse({
-            'success': True,
-            'diary': {
-                'id': diary.id,
-                'title': diary.title,
-                'content': diary.content,
-                'created_by': diary.created_by.username
-            }
-        })
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+    return JsonResponse({'success': False, 'error': 'Geçersiz istek metodu'})
