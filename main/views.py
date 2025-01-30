@@ -50,19 +50,35 @@ def projects(request):
     return render(request, 'main/projects.html', {'projects': all_projects})
 
 @login_required
-@require_http_methods(['POST'])
 def update_task_status(request):
-    data = json.loads(request.body)
-    task_id = data.get('task_id')
-    new_status = data.get('new_status')
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            task_id = data.get('task_id')
+            new_status = data.get('status')
+            
+            if not all([task_id, new_status]):
+                return JsonResponse({'success': False, 'error': 'Eksik bilgi'})
+            
+            try:
+                task = Task.objects.get(id=task_id)
+            except Task.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Görev bulunamadı'})
+            
+            # Status'un geçerli olduğunu kontrol et
+            if new_status not in [choice[0] for choice in Task.STATUS_CHOICES]:
+                return JsonResponse({'success': False, 'error': 'Geçersiz durum'})
+            
+            task.status = new_status
+            task.save()
+            
+            return JsonResponse({'success': True})
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Geçersiz JSON verisi'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
     
-    try:
-        task = Task.objects.get(id=task_id)
-        task.status = new_status
-        task.save()
-        return JsonResponse({'success': True})
-    except Task.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Task not found'}, status=404)
+    return JsonResponse({'success': False, 'error': 'Geçersiz istek metodu'})
 
 @login_required
 @require_http_methods(['POST'])
@@ -82,17 +98,30 @@ def update_task(request):
         return JsonResponse({'success': False, 'error': 'Task not found'}, status=404)
 
 @login_required
-@require_http_methods(['POST'])
 def delete_project(request):
-    data = json.loads(request.body)
-    project_id = data.get('project_id')
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            project_id = data.get('project_id')
+            
+            if not project_id:
+                return JsonResponse({'success': False, 'error': 'Proje ID eksik'})
+            
+            try:
+                project = Project.objects.get(id=project_id)
+            except Project.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Proje bulunamadı'})
+            
+            # Projeyi sil
+            project.delete()
+            
+            return JsonResponse({'success': True})
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Geçersiz JSON verisi'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
     
-    try:
-        project = Project.objects.get(id=project_id)
-        project.delete()
-        return JsonResponse({'success': True})
-    except Project.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Project not found'}, status=404)
+    return JsonResponse({'success': False, 'error': 'Geçersiz istek metodu'})
 
 @login_required
 @require_http_methods(['POST'])

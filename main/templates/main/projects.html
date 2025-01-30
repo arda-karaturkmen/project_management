@@ -280,23 +280,19 @@
     }
     
     .task-card {
-        cursor: move;
+        cursor: grab;
         margin-bottom: 10px !important;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
-    .task-card .btn-outline-primary {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
-    }
-    
     .task-card.dragging {
         opacity: 0.5;
+        cursor: grabbing;
     }
 
     .kanban-column.drag-over {
-        background-color: #e9ecef;
-        border: 2px dashed #6c757d;
+        background-color: rgba(0, 123, 255, 0.1);
+        border: 2px dashed #007bff;
     }
 </style>
 {% endblock %}
@@ -320,7 +316,7 @@ function getCookie(name) {
 
 function confirmDeleteProject(projectId, projectTitle) {
     if (confirm(`"${projectTitle}" projesini silmek istediğinizden emin misiniz?`)) {
-        fetch('/projects/delete/', {
+        fetch('/project/delete/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -330,17 +326,22 @@ function confirmDeleteProject(projectId, projectTitle) {
                 project_id: projectId
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 location.reload();
             } else {
-                alert('Proje silinirken bir hata oluştu: ' + data.error);
+                alert('Proje silinirken bir hata oluştu: ' + (data.error || 'Bilinmeyen hata'));
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Proje silinirken bir hata oluştu.');
+            alert('Proje silinirken bir hata oluştu. Lütfen tekrar deneyin.');
         });
     }
 }
@@ -358,7 +359,7 @@ function closeTaskModal() {
 }
 
 function updateTaskStatus(taskId, newStatus) {
-    fetch('/tasks/update_status/', {
+    fetch('/project/task/status/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -369,17 +370,22 @@ function updateTaskStatus(taskId, newStatus) {
             status: newStatus
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             location.reload();
         } else {
-            alert('Görev durumu güncellenirken bir hata oluştu: ' + data.error);
+            alert('Görev durumu güncellenirken bir hata oluştu: ' + (data.error || 'Bilinmeyen hata'));
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Görev durumu güncellenirken bir hata oluştu.');
+        alert('Görev durumu güncellenirken bir hata oluştu. Lütfen tekrar deneyin.');
     });
 }
 
@@ -488,5 +494,55 @@ function removeParticipant(username) {
         }
     });
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Sürüklenebilir öğeleri seç
+    const taskCards = document.querySelectorAll('.task-card');
+    const kanbanColumns = document.querySelectorAll('.kanban-column');
+
+    taskCards.forEach(card => {
+        card.setAttribute('draggable', 'true');
+        card.addEventListener('dragstart', handleDragStart);
+        card.addEventListener('dragend', handleDragEnd);
+    });
+
+    kanbanColumns.forEach(column => {
+        column.addEventListener('dragover', handleDragOver);
+        column.addEventListener('dragleave', handleDragLeave);
+        column.addEventListener('drop', handleDrop);
+    });
+
+    function handleDragStart(e) {
+        e.target.classList.add('dragging');
+        e.dataTransfer.setData('text/plain', e.target.getAttribute('data-task-id'));
+    }
+
+    function handleDragEnd(e) {
+        e.target.classList.remove('dragging');
+        kanbanColumns.forEach(column => {
+            column.classList.remove('drag-over');
+        });
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        e.currentTarget.classList.add('drag-over');
+    }
+
+    function handleDragLeave(e) {
+        e.currentTarget.classList.remove('drag-over');
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        const column = e.currentTarget;
+        column.classList.remove('drag-over');
+        
+        const taskId = e.dataTransfer.getData('text/plain');
+        const newStatus = column.getAttribute('data-status');
+        
+        updateTaskStatus(taskId, newStatus);
+    }
+});
 </script>
 {% endblock %}
